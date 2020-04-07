@@ -6,6 +6,7 @@ namespace PeriodicalChangePusher.Core
 {
     public class PeriodicalChangePusher : IPeriodicalChangePusher
     {
+        private readonly IInitialDataProvider initialDataProvider;
         private readonly IIntervalDataProvider intervalDataProvider;
 
         private readonly Dictionary<string, List<IPushSubscriber>> listenerDic =
@@ -17,9 +18,11 @@ namespace PeriodicalChangePusher.Core
         private readonly Dictionary<string, ConcurrentDictionary<string, KeyValuePair<long, string>>> topicDictionaries
             = new Dictionary<string, ConcurrentDictionary<string, KeyValuePair<long, string>>>();
 
-        public PeriodicalChangePusher(IIntervalDataProvider intervalDataProvider)
+        public PeriodicalChangePusher(IIntervalDataProvider intervalDataProvider,
+            IInitialDataProvider initialDataProvider)
         {
             this.intervalDataProvider = intervalDataProvider;
+            this.initialDataProvider = initialDataProvider;
         }
 
         public void Save(string topic, string key, string value)
@@ -30,33 +33,60 @@ namespace PeriodicalChangePusher.Core
                 topicDictionaries.Add(topic, topicRelatedDic);
                 var intervalTask = new IntervalTask(topic, intervalDataProvider.GetInterval(topic), topicRelatedDic);
                 taskDic.Add(topic, intervalTask);
-                intervalTask.SetListener(listenerDic[topic]);
+                if (listenerDic.ContainsKey(topic))
+                    intervalTask.SetListener(listenerDic[topic]);
                 intervalTask.Start();
             }
 
             var sequence = DateTime.Now.Ticks;
-            var keyvalue = new KeyValuePair<long, string>(sequence, value);
-            topicDictionaries[topic].AddOrUpdate(key, keyvalue, (k, v) => keyvalue);
+            var keyValue = new KeyValuePair<long, string>(sequence, value);
+            topicDictionaries[topic].AddOrUpdate(key, keyValue, (k, v) => keyValue);
         }
 
-        public void Register(IPushSubscriber pushReciever, string topic)
+        public void Register(IPushSubscriber pushSubscriber, string topic)
         {
             if (!listenerDic.ContainsKey(topic))
                 listenerDic.Add(topic, new List<IPushSubscriber>());
-            var pushRecievers = listenerDic[topic];
-            pushRecievers.Add(pushReciever);
+            var pushSubscribers = listenerDic[topic];
+            pushSubscribers.Add(pushSubscriber);
             if (taskDic.ContainsKey(topic))
-                taskDic[topic].SetListener(pushRecievers);
-            pushReciever.Initialize();
+                taskDic[topic].SetListener(pushSubscribers);
+            pushSubscriber.Initialize();
         }
 
-        public void UnRegister(IPushSubscriber pushReciever, string topic)
+        public void UnRegister(IPushSubscriber pushSubscriber, string topic)
         {
             if (!listenerDic.ContainsKey(topic))
                 return;
-            var pushRecievers = listenerDic[topic];
-            pushRecievers.Remove(pushReciever);
-            taskDic[topic].SetListener(pushRecievers);
+            var pushSubscribers = listenerDic[topic];
+            pushSubscribers.Remove(pushSubscriber);
+            taskDic[topic].SetListener(pushSubscribers);
         }
+
+        public string Load(string topic, string key)
+        {
+            topicDictionaries.TryGetValue(topic, out var foundDic);
+            if (foundDic == null)
+            {
+                var initialData = initialDataProvider.Provide(topic, key);
+                Save(topic, key, initialData);
+                return initialData;
+            }
+
+            foundDic.TryGetValue(key, out var foundKeyValuePair);
+            if (foundKeyValuePair.Key == 0 && foundKeyValuePair.Value == null)
+            {
+                var initialData = initialDataProvider.Provide(topic, key);
+                Save(topic, key, initialData);
+                return initialData;
+            }
+
+            return foundKeyValuePair.Value;
+        }
+    }
+
+    public interface IInitialDataProvider
+    {
+        string Provide(string topic, string key);
     }
 }
