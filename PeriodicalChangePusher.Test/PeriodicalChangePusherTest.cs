@@ -261,7 +261,7 @@ namespace PeriodicalChangePusher.Test
             }
             stopwatch.Stop();
             var ress1 = lstResult.Skip(1).Take(10000).OrderBy(i => i).ToList();
-            var ress2= lstResult.Skip(100001).Take(10000).OrderBy(i => i).ToList();
+            var ress2= lstResult.Skip(10001).Take(10000).OrderBy(i => i).ToList();
         }
     }
 }
