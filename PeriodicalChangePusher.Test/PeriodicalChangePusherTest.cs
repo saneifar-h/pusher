@@ -255,7 +255,7 @@ namespace PeriodicalChangePusher.Test
                 counter++;
                 if (counter % 79 == 0)
                 {
-                    lstLoads.Add(periodicalChangePusher.Load(BidAskTopic, $"InsIdIR0005D{rnd.Next(10000).ToString().PadLeft(5, '0')}"));
+                    lstLoads.Add(periodicalChangePusher.Load(BidAskTopic, $"InsIdIR0005D{rnd.Next(1, 10000).ToString().PadLeft(5, '0')}"));
                 }
             }
             stopwatch.Stop();
@@ -283,7 +283,7 @@ namespace PeriodicalChangePusher.Test
                     lstValue.Enqueue(new KeyValuePair<string, string>($"InsIdIR0005D{i.ToString().PadLeft(5, '0')}", $"{CreateBidAsk(j)}"));
                 }
             }
-           
+
             var lstResult = new List<string>();
             var lstLoads = new List<object>();
             var listener = Substitute.For<IPushSubscriber>();
@@ -314,17 +314,17 @@ namespace PeriodicalChangePusher.Test
                 }
                 if (counter % 79 == 0)
                 {
-                    lstLoads.Add(periodicalChangePusher.Load(BidAskTopic, $"InsIdIR0005D{rnd.Next(1,10000).ToString().PadLeft(5, '0')}"));
+                    lstLoads.Add(periodicalChangePusher.Load(BidAskTopic, $"InsIdIR0005D{rnd.Next(1, 10000).ToString().PadLeft(5, '0')}"));
                 }
             }
             stopwatch.Stop();
             Task.Delay(2000).Wait();
-            var count= lstResult.Count;
+            var count = lstResult.Count;
             Task.Delay(1000).Wait();
             periodicalChangePusher.StartPush(BidAskTopic);
             Task.Delay(3000).Wait();
 
-            Assert.AreEqual(count+10000,lstResult.Count);
+            Assert.AreEqual(count + 10000, lstResult.Count);
         }
 
         private string CreateBidAsk(int index)
