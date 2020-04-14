@@ -63,6 +63,18 @@ namespace PeriodicalChangePusher.Core
             taskDic[topic].SetListener(pushSubscribers);
         }
 
+        public void StopPush(string topic)
+        {
+            if (taskDic.ContainsKey(topic))
+                taskDic[topic].Stop();
+        }
+
+        public void StartPush(string topic)
+        {
+            if (taskDic.ContainsKey(topic))
+                taskDic[topic].Start();
+        }
+
         public object Load(string topic, string key)
         {
             topicDictionaries.TryGetValue(topic, out var foundDic);

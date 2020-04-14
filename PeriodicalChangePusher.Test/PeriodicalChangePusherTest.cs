@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSubstitute;
@@ -228,7 +227,7 @@ namespace PeriodicalChangePusher.Test
             {
                 for (int i = 1; i < 10001; i++)
                 {
-                    lstValue.Enqueue(new KeyValuePair<string, string>($"InsIdIR0005D{i.ToString().PadLeft(5,'0')}", $"{CreateBidAsk(j)}"));
+                    lstValue.Enqueue(new KeyValuePair<string, string>($"InsIdIR0005D{i.ToString().PadLeft(5, '0')}", $"{CreateBidAsk(j)}"));
                 }
             }
             var lstResult = new List<string>();
@@ -256,24 +255,87 @@ namespace PeriodicalChangePusher.Test
                 counter++;
                 if (counter % 79 == 0)
                 {
-                    lstLoads.Add(periodicalChangePusher.Load(BidAskTopic, $"InsIdIR0005D{rnd.Next(10000)}"));
+                    lstLoads.Add(periodicalChangePusher.Load(BidAskTopic, $"InsIdIR0005D{rnd.Next(10000).ToString().PadLeft(5, '0')}"));
                 }
             }
             stopwatch.Stop();
             Task.Delay(1500).Wait();
-            var ress1 = lstResult.Skip(1).Take(10000).OrderBy(i => i).ToList();
-            var ress2= lstResult.Skip(10001).Take(10000).OrderBy(i => i).ToList();
+            Assert.AreEqual(2000000 / 79, lstLoads.Count);
+            Assert.IsTrue(lstResult.Count > stopwatch.Elapsed.Seconds * 10000);
+        }
+
+
+        [TestMethod]
+        public void LoadTestWithStopAndStartPush()
+        {
+            var intervalDataProvider = Substitute.For<IIntervalDataProvider>();
+            var initialDataProvider = Substitute.For<IInitialDataProvider>();
+            var initialBidAsk = "initial BidAsk";
+            initialDataProvider.Provide(BidAskTopic, Arg.Any<string>()).Returns(initialBidAsk);
+            intervalDataProvider.GetInterval(BidAskTopic).Returns(1000);
+
+            var lstValue = new Queue<KeyValuePair<string, string>>();
+
+            for (int j = 1; j < 201; j++)
+            {
+                for (int i = 1; i < 10001; i++)
+                {
+                    lstValue.Enqueue(new KeyValuePair<string, string>($"InsIdIR0005D{i.ToString().PadLeft(5, '0')}", $"{CreateBidAsk(j)}"));
+                }
+            }
+           
+            var lstResult = new List<string>();
+            var lstLoads = new List<object>();
+            var listener = Substitute.For<IPushSubscriber>();
+            listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, object>>>())).Do(x =>
+            {
+                var topic = (string)x.Args()[0];
+                var value = (IEnumerable<KeyValuePair<string, object>>)x.Args()[1];
+                foreach (var item in value)
+                {
+                    lstResult.Add($"rec topic:{topic} key:{item.Key} value:{item.Value} time:{DateTime.Now.TimeOfDay}");
+                }
+            });
+            var stopwatch = new Stopwatch();
+            var periodicalChangePusher = new Core.PeriodicalChangePusher(intervalDataProvider, initialDataProvider);
+            periodicalChangePusher.Register(listener, BidAskTopic);
+            var rnd = new Random();
+            var counter = 0;
+            stopwatch.Start();
+            while (lstValue.Count > 0)
+            {
+                var keyValuePair = lstValue.Dequeue();
+                periodicalChangePusher.Save(BidAskTopic, keyValuePair.Key, keyValuePair.Value);
+                counter++;
+                if (counter == 100)
+                {
+                    Task.Delay(1000).Wait();
+                    periodicalChangePusher.StopPush(BidAskTopic);
+                }
+                if (counter % 79 == 0)
+                {
+                    lstLoads.Add(periodicalChangePusher.Load(BidAskTopic, $"InsIdIR0005D{rnd.Next(1,10000).ToString().PadLeft(5, '0')}"));
+                }
+            }
+            stopwatch.Stop();
+            Task.Delay(2000).Wait();
+            var count= lstResult.Count;
+            Task.Delay(1000).Wait();
+            periodicalChangePusher.StartPush(BidAskTopic);
+            Task.Delay(3000).Wait();
+
+            Assert.AreEqual(count+10000,lstResult.Count);
         }
 
         private string CreateBidAsk(int index)
         {
-            var str=$"{{\"AskCount\":{index},\"AskPrice\":{index},\"AskVolume\":{index},\"BidAskDateTime\":null,\"BidCount\":{index},\"BidPrice\":{index},\"BidVolume\":{index}}}";
-            var lstdata= new List<string>();
+            var str = $"{{\"AskCount\":{index},\"AskPrice\":{index},\"AskVolume\":{index},\"BidAskDateTime\":null,\"BidCount\":{index},\"BidPrice\":{index},\"BidVolume\":{index}}}";
+            var lstdata = new List<string>();
             for (int j = 0; j < 5; j++)
             {
                 lstdata.Add(str);
             }
-            return $"[{string.Join(",",lstdata)}]";
+            return $"[{string.Join(",", lstdata)}]";
         }
     }
 }
