@@ -39,10 +39,10 @@ namespace PeriodicalChangePusher.Test
             var lstResult = new List<string>();
 
             var listener = Substitute.For<IPushSubscriber>();
-            listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, string>>>())).Do(x =>
+            listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, object>>>())).Do(x =>
            {
                var topic = (string)x.Args()[0];
-               var value = (IEnumerable<KeyValuePair<string, string>>)x.Args()[1];
+               var value = (IEnumerable<KeyValuePair<string, object>>)x.Args()[1];
                foreach (var item in value)
                {
                    lstResult.Add($"rec topic:{topic} key:{item.Key} value:{item.Value} time:{DateTime.Now.TimeOfDay}");
@@ -90,10 +90,10 @@ namespace PeriodicalChangePusher.Test
             var lstResult = new List<string>();
 
             var listener = Substitute.For<IPushSubscriber>();
-            listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, string>>>())).Do(x =>
+            listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, object>>>())).Do(x =>
             {
                 var topic = (string)x.Args()[0];
-                var values = (IEnumerable<KeyValuePair<string, string>>)x.Args()[1];
+                var values = (IEnumerable<KeyValuePair<string, object>>)x.Args()[1];
                 foreach (var item in values)
                 {
                     lstResult.Add($"rec topic:{topic} key:{item.Key} value:{item.Value} time:{DateTime.Now.TimeOfDay}");
@@ -163,10 +163,10 @@ namespace PeriodicalChangePusher.Test
             var lstResult = new List<string>();
 
             var listener = Substitute.For<IPushSubscriber>();
-            listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, string>>>())).Do(x =>
+            listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, object>>>())).Do(x =>
             {
                 var topic = (string)x.Args()[0];
-                var value = (IEnumerable<KeyValuePair<string, string>>)x.Args()[1];
+                var value = (IEnumerable<KeyValuePair<string, object>>)x.Args()[1];
                 foreach (var item in value)
                 {
                     lstResult.Add($"rec topic:{topic} key:{item.Key} value:{item.Value} time:{DateTime.Now.TimeOfDay}");
@@ -224,20 +224,20 @@ namespace PeriodicalChangePusher.Test
 
             var lstValue = new Queue<KeyValuePair<string, string>>();
 
-            for (int j = 1; j < 501; j++)
+            for (int j = 1; j < 201; j++)
             {
                 for (int i = 1; i < 10001; i++)
                 {
-                    lstValue.Enqueue(new KeyValuePair<string, string>($"InsIdIR0005D{i.ToString().PadLeft(5,'0')}", $"{j.ToString().PadLeft(3,'0')}"));
+                    lstValue.Enqueue(new KeyValuePair<string, string>($"InsIdIR0005D{i.ToString().PadLeft(5,'0')}", $"{CreateBidAsk(j)}"));
                 }
             }
             var lstResult = new List<string>();
-            var lstLoads = new List<string>();
+            var lstLoads = new List<object>();
             var listener = Substitute.For<IPushSubscriber>();
-            listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, string>>>())).Do(x =>
+            listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, object>>>())).Do(x =>
             {
                 var topic = (string)x.Args()[0];
-                var value = (IEnumerable<KeyValuePair<string, string>>)x.Args()[1];
+                var value = (IEnumerable<KeyValuePair<string, object>>)x.Args()[1];
                 foreach (var item in value)
                 {
                     lstResult.Add($"rec topic:{topic} key:{item.Key} value:{item.Value} time:{DateTime.Now.TimeOfDay}");
@@ -260,8 +260,20 @@ namespace PeriodicalChangePusher.Test
                 }
             }
             stopwatch.Stop();
+            Task.Delay(1500).Wait();
             var ress1 = lstResult.Skip(1).Take(10000).OrderBy(i => i).ToList();
             var ress2= lstResult.Skip(10001).Take(10000).OrderBy(i => i).ToList();
+        }
+
+        private string CreateBidAsk(int index)
+        {
+            var str=$"{{\"AskCount\":{index},\"AskPrice\":{index},\"AskVolume\":{index},\"BidAskDateTime\":null,\"BidCount\":{index},\"BidPrice\":{index},\"BidVolume\":{index}}}";
+            var lstdata= new List<string>();
+            for (int j = 0; j < 5; j++)
+            {
+                lstdata.Add(str);
+            }
+            return $"[{string.Join(",",lstdata)}]";
         }
     }
 }

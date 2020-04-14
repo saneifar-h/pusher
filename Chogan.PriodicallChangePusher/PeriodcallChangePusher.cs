@@ -15,8 +15,8 @@ namespace PeriodicalChangePusher.Core
         private readonly Dictionary<string, IntervalTask> taskDic =
             new Dictionary<string, IntervalTask>();
 
-        private readonly Dictionary<string, ConcurrentDictionary<string, KeyValuePair<long, string>>> topicDictionaries
-            = new Dictionary<string, ConcurrentDictionary<string, KeyValuePair<long, string>>>();
+        private readonly Dictionary<string, ConcurrentDictionary<string, KeyValuePair<long, object>>> topicDictionaries
+            = new Dictionary<string, ConcurrentDictionary<string, KeyValuePair<long, object>>>();
 
         public PeriodicalChangePusher(IIntervalDataProvider intervalDataProvider,
             IInitialDataProvider initialDataProvider)
@@ -25,11 +25,11 @@ namespace PeriodicalChangePusher.Core
             this.initialDataProvider = initialDataProvider;
         }
 
-        public void Save(string topic, string key, string value)
+        public void Save(string topic, string key, object value)
         {
             if (!topicDictionaries.ContainsKey(topic))
             {
-                var topicRelatedDic = new ConcurrentDictionary<string, KeyValuePair<long, string>>();
+                var topicRelatedDic = new ConcurrentDictionary<string, KeyValuePair<long, object>>();
                 topicDictionaries.Add(topic, topicRelatedDic);
                 var intervalTask = new IntervalTask(topic, intervalDataProvider.GetInterval(topic), topicRelatedDic);
                 taskDic.Add(topic, intervalTask);
@@ -39,7 +39,7 @@ namespace PeriodicalChangePusher.Core
             }
 
             var sequence = DateTime.Now.Ticks;
-            var keyValue = new KeyValuePair<long, string>(sequence, value);
+            var keyValue = new KeyValuePair<long, object>(sequence, value);
             topicDictionaries[topic].AddOrUpdate(key, keyValue, (k, v) => keyValue);
         }
 
@@ -63,7 +63,7 @@ namespace PeriodicalChangePusher.Core
             taskDic[topic].SetListener(pushSubscribers);
         }
 
-        public string Load(string topic, string key)
+        public object Load(string topic, string key)
         {
             topicDictionaries.TryGetValue(topic, out var foundDic);
             if (foundDic == null)
@@ -83,10 +83,5 @@ namespace PeriodicalChangePusher.Core
 
             return foundKeyValuePair.Value;
         }
-    }
-
-    public interface IInitialDataProvider
-    {
-        string Provide(string topic, string key);
     }
 }
