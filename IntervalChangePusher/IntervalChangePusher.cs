@@ -2,12 +2,12 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
-namespace PeriodicalChangePusher.Core
+namespace IntervalChangePusherLib
 {
-    public class PeriodicalChangePusher : IPeriodicalChangePusher
+    public class IntervalChangePusher : IIntervalChangePusher
     {
-        private readonly IInitialDataProvider initialDataProvider;
-        private readonly IIntervalDataProvider intervalDataProvider;
+        private readonly IInitialInfoProvider initialDataProvider;
+        private readonly IIntervalProvider intervalDataProvider;
 
         private readonly Dictionary<string, List<IPushSubscriber>> listenerDic =
             new Dictionary<string, List<IPushSubscriber>>();
@@ -18,14 +18,14 @@ namespace PeriodicalChangePusher.Core
         private readonly Dictionary<string, ConcurrentDictionary<string, KeyValuePair<long, object>>> topicDictionaries
             = new Dictionary<string, ConcurrentDictionary<string, KeyValuePair<long, object>>>();
 
-        public PeriodicalChangePusher(IIntervalDataProvider intervalDataProvider,
-            IInitialDataProvider initialDataProvider)
+        public IntervalChangePusher(IIntervalProvider intervalDataProvider,
+            IInitialInfoProvider initialDataProvider)
         {
             this.intervalDataProvider = intervalDataProvider;
             this.initialDataProvider = initialDataProvider;
         }
 
-        public void Save(string topic, string key, object value)
+        public void Put(string topic, string key, object value)
         {
             if (!topicDictionaries.ContainsKey(topic))
             {
@@ -43,7 +43,7 @@ namespace PeriodicalChangePusher.Core
             topicDictionaries[topic].AddOrUpdate(key, keyValue, (k, v) => keyValue);
         }
 
-        public void Register(IPushSubscriber pushSubscriber, string topic)
+        public void Subscribe(IPushSubscriber pushSubscriber, string topic)
         {
             if (!listenerDic.ContainsKey(topic))
                 listenerDic.Add(topic, new List<IPushSubscriber>());
@@ -54,7 +54,7 @@ namespace PeriodicalChangePusher.Core
             pushSubscriber.Initialize();
         }
 
-        public void UnRegister(IPushSubscriber pushSubscriber, string topic)
+        public void UnSubscribe(IPushSubscriber pushSubscriber, string topic)
         {
             if (!listenerDic.ContainsKey(topic))
                 return;
@@ -75,13 +75,13 @@ namespace PeriodicalChangePusher.Core
                 taskDic[topic].Start();
         }
 
-        public object Load(string topic, string key)
+        public object Fetch(string topic, string key)
         {
             topicDictionaries.TryGetValue(topic, out var foundDic);
             if (foundDic == null)
             {
                 var initialData = initialDataProvider.Provide(topic, key);
-                Save(topic, key, initialData);
+                Put(topic, key, initialData);
                 return initialData;
             }
 
@@ -89,7 +89,7 @@ namespace PeriodicalChangePusher.Core
             if (foundKeyValuePair.Key == 0 && foundKeyValuePair.Value == null)
             {
                 var initialData = initialDataProvider.Provide(topic, key);
-                Save(topic, key, initialData);
+                Put(topic, key, initialData);
                 return initialData;
             }
 

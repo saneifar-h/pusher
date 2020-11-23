@@ -1,4 +1,4 @@
-﻿namespace PeriodicalChangePusher.Redis
+﻿namespace IntervalChangePusherRedis
 {
     public interface IRedisConnectionProvider
     {

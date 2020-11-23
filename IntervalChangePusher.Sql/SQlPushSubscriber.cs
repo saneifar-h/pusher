@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Data.SqlClient;
-using PeriodicalChangePusher.Core;
+using IntervalChangePusherLib;
 
-namespace PeriodicalChangePusher.Sql
+namespace IntervalChangePusherSql
 {
     public class SqlPushSubscriber : IPushSubscriber
     {
@@ -13,10 +13,11 @@ namespace PeriodicalChangePusher.Sql
         {
             this.sqlConnectionProvider = sqlConnectionProvider;
         }
+
         public async void OnPush(string topic, IReadOnlyList<KeyValuePair<string, object>> changeValues)
         {
-
         }
+
         public void Initialize()
         {
             if (sqlConnection != null) return;

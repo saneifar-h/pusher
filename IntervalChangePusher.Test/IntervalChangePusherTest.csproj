@@ -8,8 +8,8 @@
     <ProjectGuid>{6368869F-F782-4C5B-BB16-ADD49BE71C59}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>PeriodicalChangePusher.Test</RootNamespace>
-    <AssemblyName>PeriodicalChangePusher.Test</AssemblyName>
+    <RootNamespace>IntervalChangePusher.Test</RootNamespace>
+    <AssemblyName>IntervalChangePusher.Test</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -60,16 +60,16 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="PeriodicalChangePusherTest.cs" />
+    <Compile Include="IntervalChangePusherTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Chogan.PriodicallChangePusher\PeriodicalChangePusher.Core.csproj">
-      <Project>{150e7b2f-2383-49ec-9cfa-9518d8c119c5}</Project>
-      <Name>PeriodicalChangePusher.Core</Name>
+    <ProjectReference Include="..\IntervalChangePusher\IntervalChangePusherLib.csproj">
+      <Project>{213a60a8-8b9e-4551-8526-203b892343ab}</Project>
+      <Name>IntervalChangePusherLib</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />

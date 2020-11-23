@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace PeriodicalChangePusher.Core
+namespace IntervalChangePusherLib
 {
     public interface IPushSubscriber
     {

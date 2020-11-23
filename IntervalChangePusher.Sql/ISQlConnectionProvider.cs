@@ -1,4 +1,4 @@
-﻿namespace PeriodicalChangePusher.Sql
+﻿namespace IntervalChangePusherSql
 {
     public interface ISqlConnectionProvider
     {
