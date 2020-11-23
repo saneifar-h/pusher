@@ -8,12 +8,12 @@ namespace IntervalChangePusherLib
 {
     public class IntervalTask
     {
-        private CancellationTokenSource cancellationTokenSource;
+        private static readonly object SyncObject = new object();
         private readonly int interval;
         private readonly ConcurrentDictionary<string, KeyValuePair<long, object>> keyValues;
         private readonly Dictionary<string, long> processedValues = new Dictionary<string, long>();
         private readonly string topic;
-        private static readonly object SyncObject = new object();
+        private CancellationTokenSource cancellationTokenSource;
         private List<IPushSubscriber> receivers;
         private Task task;
 
@@ -24,7 +24,6 @@ namespace IntervalChangePusherLib
             this.keyValues = keyValues;
 
             this.topic = topic;
-
         }
 
         public void SetListener(List<IPushSubscriber> setReceivers)
@@ -43,7 +42,6 @@ namespace IntervalChangePusherLib
                 task = Task.Factory.StartNew(TaskAction, cancellationTokenSource.Token,
                     TaskCreationOptions.LongRunning | TaskCreationOptions.AttachedToParent, TaskScheduler.Default);
             }
-
         }
 
         public void Stop()
@@ -65,6 +63,7 @@ namespace IntervalChangePusherLib
                 {
                     break;
                 }
+
                 if (cancellationTokenSource.Token.IsCancellationRequested)
                     break;
                 var lstValues = new List<KeyValuePair<string, object>>();
@@ -75,6 +74,7 @@ namespace IntervalChangePusherLib
                     lstValues.Add(new KeyValuePair<string, object>(item.Key, item.Value.Value));
                     processedValues[item.Key] = item.Value.Key;
                 }
+
                 foreach (var pushReceiver in receivers) pushReceiver.OnPush(topic, lstValues);
             }
         }
