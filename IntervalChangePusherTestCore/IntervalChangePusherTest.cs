@@ -32,23 +32,23 @@ namespace IntervalChangePusherTestCore
         {
             var intervalDataProvider = Substitute.For<IIntervalProvider>();
             var initialDataProvider = Substitute.For<IInitialInfoProvider>();
-            intervalDataProvider.GetInterval(BidAskTopic).Returns(1000);
-            intervalDataProvider.GetInterval(TradeTopic).Returns(2000);
-            intervalDataProvider.GetInterval(DetailTopic).Returns(1500);
+            intervalDataProvider.GetIntervalUnit(BidAskTopic).Returns(2);
+            intervalDataProvider.GetIntervalUnit(TradeTopic).Returns(4);
+            intervalDataProvider.GetIntervalUnit(DetailTopic).Returns(3);
             var lstResult = new List<string>();
 
             var listener = Substitute.For<IPushSubscriber>();
             listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, object>>>())).Do(
                 x =>
                 {
-                    var topic = (string) x.Args()[0];
-                    var value = (IEnumerable<KeyValuePair<string, object>>) x.Args()[1];
+                    var topic = (string)x.Args()[0];
+                    var value = (IEnumerable<KeyValuePair<string, object>>)x.Args()[1];
                     foreach (var item in value)
                         lstResult.Add(
                             $"rec topic:{topic} key:{item.Key} value:{item.Value} time:{DateTime.Now.TimeOfDay}");
                 });
 
-            var intervalChangePusher = new IntervalChangePusher(intervalDataProvider, initialDataProvider);
+            var intervalChangePusher = new IntervalChangePusher(new IntervalUnit(500), intervalDataProvider, initialDataProvider);
             intervalChangePusher.Subscribe(listener, BidAskTopic);
             intervalChangePusher.Subscribe(listener, TradeTopic);
             intervalChangePusher.Subscribe(listener, DetailTopic);
@@ -84,37 +84,36 @@ namespace IntervalChangePusherTestCore
         {
             var intervalDataProvider = Substitute.For<IIntervalProvider>();
             var initialDataProvider = Substitute.For<IInitialInfoProvider>();
-            intervalDataProvider.GetInterval(BidAskTopic).Returns(1000);
+            intervalDataProvider.GetIntervalUnit(BidAskTopic).Returns(2);
             var lstResult = new List<string>();
 
             var listener = Substitute.For<IPushSubscriber>();
             listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, object>>>())).Do(
                 x =>
                 {
-                    var topic = (string) x.Args()[0];
-                    var values = (IEnumerable<KeyValuePair<string, object>>) x.Args()[1];
+                    var topic = (string)x.Args()[0];
+                    var values = (IEnumerable<KeyValuePair<string, object>>)x.Args()[1];
                     foreach (var item in values)
                         lstResult.Add(
                             $"rec topic:{topic} key:{item.Key} value:{item.Value} time:{DateTime.Now.TimeOfDay}");
                 });
 
-            var intervalChangePusher = new IntervalChangePusher(intervalDataProvider, initialDataProvider);
+            var intervalChangePusher = new IntervalChangePusher(new IntervalUnit(200), intervalDataProvider, initialDataProvider);
             intervalChangePusher.Subscribe(listener, BidAskTopic);
             lstResult.Add($"start time {DateTime.Now.TimeOfDay}");
             intervalChangePusher.Put(BidAskTopic, "1", "test10");
+            Task.Delay(10).Wait();
             intervalChangePusher.Put(BidAskTopic, "1", "test11");
             intervalChangePusher.Put(BidAskTopic, "1", "test12");
             intervalChangePusher.Put(BidAskTopic, "1", "test13");
             intervalChangePusher.Put(BidAskTopic, "1", "test14");
-
-            Task.Delay(800).Wait();
             intervalChangePusher.Put(BidAskTopic, "1", "test15");
 
-            Task.Delay(500).Wait();
+            Task.Delay(700).Wait();
             intervalChangePusher.Put(BidAskTopic, "1", "test16");
             intervalChangePusher.Put(BidAskTopic, "1", "test17");
             intervalChangePusher.Put(BidAskTopic, "1", "test18");
-            Task.Delay(2000).Wait();
+            Task.Delay(2100).Wait();
             intervalChangePusher.Put(BidAskTopic, "1", "test19");
             intervalChangePusher.Put(BidAskTopic, "1", "test20");
             intervalChangePusher.Put(BidAskTopic, "1", "test21");
@@ -122,9 +121,10 @@ namespace IntervalChangePusherTestCore
 
             Task.Delay(5000).Wait();
 
-            Assert.IsTrue(lstResult[1].StartsWith("rec topic:bidAsk key:1 value:test15 "));
-            Assert.IsTrue(lstResult[2].StartsWith("rec topic:bidAsk key:1 value:test18 "));
-            Assert.IsTrue(lstResult[3].StartsWith("rec topic:bidAsk key:1 value:test22 "));
+            Assert.IsTrue(lstResult[1].StartsWith("rec topic:bidAsk key:1 value:test10 "));
+            Assert.IsTrue(lstResult[2].StartsWith("rec topic:bidAsk key:1 value:test15 "));
+            Assert.IsTrue(lstResult[3].StartsWith("rec topic:bidAsk key:1 value:test18 "));
+            Assert.IsTrue(lstResult[4].StartsWith("rec topic:bidAsk key:1 value:test22 "));
             Assert.AreEqual(4, lstResult.Count);
         }
 
@@ -135,8 +135,8 @@ namespace IntervalChangePusherTestCore
             var initialDataProvider = Substitute.For<IInitialInfoProvider>();
             initialDataProvider.Provide(BidAskTopic, "1").Returns("Value1");
             initialDataProvider.Provide(BidAskTopic, "2").Returns("Value2");
-            intervalDataProvider.GetInterval(BidAskTopic).Returns(1000);
-            var intervalChangePusher = new IntervalChangePusher(intervalDataProvider, initialDataProvider);
+            intervalDataProvider.GetIntervalUnit(BidAskTopic).Returns(1);
+            var intervalChangePusher = new IntervalChangePusher(new IntervalUnit(1000), intervalDataProvider, initialDataProvider);
             Assert.AreEqual("Value1", intervalChangePusher.Fetch(BidAskTopic, "1"));
             Assert.AreEqual("Value2", intervalChangePusher.Fetch(BidAskTopic, "2"));
             Assert.AreEqual("Value2", intervalChangePusher.Fetch(BidAskTopic, "2"));
@@ -154,23 +154,23 @@ namespace IntervalChangePusherTestCore
             initialDataProvider.Provide(DetailTopic, Arg.Any<string>()).Returns(initialDetail);
             var initialTrade = "initial Trade";
             initialDataProvider.Provide(TradeTopic, Arg.Any<string>()).Returns(initialTrade);
-            intervalDataProvider.GetInterval(BidAskTopic).Returns(1000);
-            intervalDataProvider.GetInterval(TradeTopic).Returns(2000);
-            intervalDataProvider.GetInterval(DetailTopic).Returns(1500);
+            intervalDataProvider.GetIntervalUnit(BidAskTopic).Returns(2);
+            intervalDataProvider.GetIntervalUnit(TradeTopic).Returns(4);
+            intervalDataProvider.GetIntervalUnit(DetailTopic).Returns(3);
             var lstResult = new List<string>();
 
             var listener = Substitute.For<IPushSubscriber>();
             listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, object>>>())).Do(
                 x =>
                 {
-                    var topic = (string) x.Args()[0];
-                    var value = (IEnumerable<KeyValuePair<string, object>>) x.Args()[1];
+                    var topic = (string)x.Args()[0];
+                    var value = (IEnumerable<KeyValuePair<string, object>>)x.Args()[1];
                     foreach (var item in value)
                         lstResult.Add(
                             $"rec topic:{topic} key:{item.Key} value:{item.Value} time:{DateTime.Now.TimeOfDay}");
                 });
 
-            var intervalChangePusher = new IntervalChangePusher(intervalDataProvider, initialDataProvider);
+            var intervalChangePusher = new IntervalChangePusher(new IntervalUnit(500),  intervalDataProvider, initialDataProvider);
             intervalChangePusher.Subscribe(listener, BidAskTopic);
             intervalChangePusher.Subscribe(listener, TradeTopic);
             intervalChangePusher.Subscribe(listener, DetailTopic);
@@ -216,28 +216,28 @@ namespace IntervalChangePusherTestCore
             var initialDataProvider = Substitute.For<IInitialInfoProvider>();
             var initialBidAsk = "initial BidAsk";
             initialDataProvider.Provide(BidAskTopic, Arg.Any<string>()).Returns(initialBidAsk);
-            intervalDataProvider.GetInterval(BidAskTopic).Returns(1000);
+            intervalDataProvider.GetIntervalUnit(BidAskTopic).Returns(1);
 
             var lstValue = new Queue<KeyValuePair<string, string>>();
 
             for (var j = 1; j < 201; j++)
-            for (var i = 1; i < 10001; i++)
-                lstValue.Enqueue(new KeyValuePair<string, string>($"InsIdIR0005D{i.ToString().PadLeft(5, '0')}",
-                    $"{CreateBidAsk(j)}"));
+                for (var i = 1; i < 10001; i++)
+                    lstValue.Enqueue(new KeyValuePair<string, string>($"InsIdIR0005D{i.ToString().PadLeft(5, '0')}",
+                        $"{CreateBidAsk(j)}"));
             var lstResult = new List<string>();
             var lstLoads = new List<object>();
             var listener = Substitute.For<IPushSubscriber>();
             listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, object>>>())).Do(
                 x =>
                 {
-                    var topic = (string) x.Args()[0];
-                    var value = (IEnumerable<KeyValuePair<string, object>>) x.Args()[1];
+                    var topic = (string)x.Args()[0];
+                    var value = (IEnumerable<KeyValuePair<string, object>>)x.Args()[1];
                     foreach (var item in value)
                         lstResult.Add(
                             $"rec topic:{topic} key:{item.Key} value:{item.Value} time:{DateTime.Now.TimeOfDay}");
                 });
             var stopwatch = new Stopwatch();
-            var intervalChangePusher = new IntervalChangePusher(intervalDataProvider, initialDataProvider);
+            var intervalChangePusher = new IntervalChangePusher(new IntervalUnit(1000),  intervalDataProvider, initialDataProvider);
             intervalChangePusher.Subscribe(listener, BidAskTopic);
             var rnd = new Random();
             var counter = 0;
@@ -266,14 +266,14 @@ namespace IntervalChangePusherTestCore
             var initialDataProvider = Substitute.For<IInitialInfoProvider>();
             var initialBidAsk = "initial BidAsk";
             initialDataProvider.Provide(BidAskTopic, Arg.Any<string>()).Returns(initialBidAsk);
-            intervalDataProvider.GetInterval(BidAskTopic).Returns(1000);
+            intervalDataProvider.GetIntervalUnit(BidAskTopic).Returns(1);
 
             var lstValue = new Queue<KeyValuePair<string, string>>();
 
             for (var j = 1; j < 201; j++)
-            for (var i = 1; i < 10001; i++)
-                lstValue.Enqueue(new KeyValuePair<string, string>($"InsIdIR0005D{i.ToString().PadLeft(5, '0')}",
-                    $"{CreateBidAsk(j)}"));
+                for (var i = 1; i < 10001; i++)
+                    lstValue.Enqueue(new KeyValuePair<string, string>($"InsIdIR0005D{i.ToString().PadLeft(5, '0')}",
+                        $"{CreateBidAsk(j)}"));
 
             var lstResult = new List<string>();
             var lstLoads = new List<object>();
@@ -281,14 +281,14 @@ namespace IntervalChangePusherTestCore
             listener.When(x => x.OnPush(Arg.Any<string>(), Arg.Any<IReadOnlyList<KeyValuePair<string, object>>>())).Do(
                 x =>
                 {
-                    var topic = (string) x.Args()[0];
-                    var value = (IEnumerable<KeyValuePair<string, object>>) x.Args()[1];
+                    var topic = (string)x.Args()[0];
+                    var value = (IEnumerable<KeyValuePair<string, object>>)x.Args()[1];
                     foreach (var item in value)
                         lstResult.Add(
                             $"rec topic:{topic} key:{item.Key} value:{item.Value} time:{DateTime.Now.TimeOfDay}");
                 });
             var stopwatch = new Stopwatch();
-            var intervalChangePusher = new IntervalChangePusher(intervalDataProvider, initialDataProvider);
+            var intervalChangePusher = new IntervalChangePusher(new IntervalUnit(1000),  intervalDataProvider, initialDataProvider);
             intervalChangePusher.Subscribe(listener, BidAskTopic);
             var rnd = new Random();
             var counter = 0;

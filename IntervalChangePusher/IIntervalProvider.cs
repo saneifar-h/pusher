@@ -2,6 +2,6 @@
 {
     public interface IIntervalProvider
     {
-        int GetInterval(string topic);
+        int GetIntervalUnit(string topic);
     }
 }

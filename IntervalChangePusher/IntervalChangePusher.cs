@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace IntervalChangePusherLib
 {
@@ -8,6 +9,7 @@ namespace IntervalChangePusherLib
     {
         private readonly IInitialInfoProvider initialDataProvider;
         private readonly IIntervalProvider intervalDataProvider;
+        private readonly IntervalUnit intervalUnit;
 
         private readonly Dictionary<string, List<IPushSubscriber>> listenerDic =
             new Dictionary<string, List<IPushSubscriber>>();
@@ -18,11 +20,14 @@ namespace IntervalChangePusherLib
         private readonly Dictionary<string, ConcurrentDictionary<string, KeyValuePair<long, object>>> topicDictionaries
             = new Dictionary<string, ConcurrentDictionary<string, KeyValuePair<long, object>>>();
 
-        public IntervalChangePusher(IIntervalProvider intervalDataProvider,
+        public IntervalChangePusher(IntervalUnit intervalUnit, IIntervalProvider intervalDataProvider,
             IInitialInfoProvider initialDataProvider)
         {
+            this.intervalUnit = intervalUnit;
             this.intervalDataProvider = intervalDataProvider;
             this.initialDataProvider = initialDataProvider;
+            var timer = new System.Timers.Timer(this.intervalUnit.UnitInMilliseconds) {Enabled = true};
+            timer.Elapsed += Timer_Elapsed;
         }
 
         public void Put(string topic, string key, object value)
@@ -31,7 +36,8 @@ namespace IntervalChangePusherLib
             {
                 var topicRelatedDic = new ConcurrentDictionary<string, KeyValuePair<long, object>>();
                 topicDictionaries.Add(topic, topicRelatedDic);
-                var intervalTask = new IntervalTask(topic, intervalDataProvider.GetInterval(topic), topicRelatedDic);
+                var intervalTask =
+                    new IntervalTask(topic, intervalDataProvider.GetIntervalUnit(topic), topicRelatedDic);
                 taskDic.Add(topic, intervalTask);
                 if (listenerDic.ContainsKey(topic))
                     intervalTask.SetListener(listenerDic[topic]);
@@ -94,6 +100,14 @@ namespace IntervalChangePusherLib
             }
 
             return foundKeyValuePair.Value;
+        }
+
+        private void Timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            foreach (var intervalTask in taskDic.Select(intervalTaskDicItem => intervalTaskDicItem.Value)
+                .Where(intervalTask =>
+                    (DateTime.Now - intervalTask.LastPushTime).TotalMilliseconds / intervalUnit.UnitInMilliseconds >
+                    intervalTask.NumberOfIntervalUnit)) intervalTask.Push();
         }
     }
 }
